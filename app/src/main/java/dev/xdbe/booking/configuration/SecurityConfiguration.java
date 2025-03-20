@@ -23,22 +23,43 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {
-
+    
+    @Bean
+    public UserDetailsService users() {
+        UserDetails admin = User.builder()
+            .username("admin")
+            //.password("{bcrypt}$2a$10$WDafrGvYCVxRTZlvDxenoe9qc0l9teedBQ1vlzJDnsTa.TVwQcaXC")
+            //.password("admin123")
+            .password("{bcrypt}$2a$10$P7zKcZVpPG/hm8S2ZDLU0uSc6KNweqVUoGfAyUNNSTkrQiktgV98W")
+            .roles("ADMIN")
+            .build();
+        
+        UserDetails user = User.builder()
+            .username("user")
+            .password("user123")
+            .roles("USER")
+            .build();
+        
+        return new InMemoryUserDetailsManager(admin, user);
+    }
+    
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        return http
+        http
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/h2-console/**")
+            )
             .authorizeHttpRequests(auth -> auth
-                // Step 3: add authorization
+                .requestMatchers("/dashboard").hasRole("ADMIN")
+                //.requestMatchers("/booking").permitAll()
                 .anyRequest().permitAll()
             )
-            // Step 3: Add login form
-            .csrf((csrf) -> csrf
-                .ignoringRequestMatchers("/h2-console/*")
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
             )
-            .headers(headers -> headers.frameOptions().disable())
-            .build();
+            .formLogin(withDefaults())
+            .logout(withDefaults());
+            
+        return http.build();
     }
-
-    // Step 3: add InMemoryUserDetailsManager
-
 }
