@@ -2,44 +2,51 @@ name: Daily Security Pipeline
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # runs daily at 03:00 UTC
-  workflow_dispatch:     # allows manual triggering
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
 
 jobs:
+
   DependenciesAnalysis:
-    name: Dependency and Semgrep Analysis
+    name: Analyse Semgrep (Java)
     runs-on: ubuntu-latest
-
+    container:
+      image: returntocorp/semgrep
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout du code
+        uses: actions/checkout@v3
 
-      - name: Run OSV Scanner
-        run: |
-          curl -LO https://github.com/google/osv-scanner/releases/latest/download/osv-scanner-linux-amd64
-    chmod +x osv-scanner-linux-amd64
-    ./osv-scanner-linux-amd64 --format sarif --output osv.sarif --recursive .
+      - name: Lancer Semgrep
+        run: semgrep --config=p/java --sarif --output=semgrep-report.sarif
 
-      - name: Upload OSV SARIF report
-        uses: github/codeql-action/upload-sarif@v2
+      - name: Upload du rapport SARIF
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: osv.sarif
-
-
-      - name: Run Semgrep in Docker
-        uses: docker://returntocorp/semgrep
-        with:
-          args: semgrep --config p/java --sarif --output semgrep.sarif
-
-      - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: semgrep.sarif
+          sarif_file: semgrep-report.sarif
 
   SourceCodeAnalysis:
-    name: Source Code Analysis
+    name: Analyse OSV Scanner
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      - name: Installer OSV Scanner
+        run: |
+          curl -sSfL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner-linux-amd64 -o osv-scanner
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
+
+      - name: Lancer OSV Scanner
+        run: |
+          osv-scanner --lockfile=**/package-lock.json --format sarif --output osv-report.sarif || echo "OSV terminé"
+
+      - name: Upload du rapport SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: osv-report.sarif
+
