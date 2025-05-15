@@ -1,0 +1,44 @@
+name: Security Check on Pull Request
+
+on:
+  pull_request:
+
+jobs:
+
+  DependenciesAnalysis:
+    name: Analyse PR avec Semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      - name: Analyse différentielle avec Semgrep
+        run: |
+          git fetch origin main
+          semgrep --config=p/java --baseline-ref=origin/main --sarif --output=semgrep-diff.sarif || true
+
+      - name: Sauvegarder le rapport comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-pr-report
+          path: semgrep-diff.sarif
+
+  SourceCodeAnalysis:
+    name: Analyse PR avec OSV Scanner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v3
+
+      - name: Scanner OSV
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: .
+
+      - name: Sauvegarder le rapport OSV comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-pr-report
+          path: osv-scanner.sarif
