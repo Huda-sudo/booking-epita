@@ -8,4 +8,3 @@ Tasks to solve this hands on:
 - [ ] Configure Cookie with same site attribute
 - [ ] Mask credit card number
 - [ ] Encrpt credit card number (Bonus)
-# booking-epita
