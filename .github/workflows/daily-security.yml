@@ -2,15 +2,14 @@ name: Daily Security Pipeline
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 1 * * *' 
   workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
+  security-events: write  
 
 jobs:
-
   DependenciesAnalysis:
     name: Analyse Semgrep (Java)
     runs-on: ubuntu-latest
@@ -23,7 +22,7 @@ jobs:
       - name: Lancer Semgrep
         run: semgrep --config=p/java --sarif --output=semgrep-report.sarif
 
-      - name: Upload du rapport SARIF
+      - name: Envoyer le rapport SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep-report.sarif
@@ -35,18 +34,17 @@ jobs:
       - name: Checkout du code
         uses: actions/checkout@v3
 
-      - name: Installer OSV Scanner
+      - name: Télécharger OSV-Scanner
         run: |
-          curl -sSfL https://github.com/google/osv-scanner/releases/latest/download/osv-scanner-linux-amd64 -o osv-scanner
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.0.2/osv-scanner_darwin_amd64 -o osv-scanner
           chmod +x osv-scanner
           sudo mv osv-scanner /usr/local/bin/
 
-      - name: Lancer OSV Scanner
+      - name: Lancer OSV-Scanner
         run: |
-          osv-scanner --lockfile=**/package-lock.json --format sarif --output osv-report.sarif || echo "OSV terminé"
+          osv-scanner --lockfile=**/package-lock.json --format sarif --output osv-report.sarif || echo "OSV scan terminé"
 
-      - name: Upload du rapport SARIF
+      - name: Envoyer le rapport SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: osv-report.sarif
-
